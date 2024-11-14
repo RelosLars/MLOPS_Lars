@@ -21,6 +21,7 @@ import numpy as np
 from optuna.integration.wandb import WeightsAndBiasesCallback
 import yaml
 import os
+import argparse
 
 print(torch.cuda.is_available())
 
@@ -268,21 +269,70 @@ def set_seed(seed):
     torch.cuda.manual_seed_all(seed)
     L.seed_everything(seed)
 
+
 with open("/app/config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
+
+default_hyperparameters  = config["hyperparameters"]
+
+parser = argparse.ArgumentParser(description="Train BERT model with configurable hyperparameters")
+
+# Hyperparameters from command-line arguments
+hyperparams_group = parser.add_argument_group('Hyperparameters')
+hyperparams_group.add_argument("--learning_rate", type=float, default=default_hyperparameters.get("learning_rate"),
+                    help="Learning rate for the optimizer")
+hyperparams_group.add_argument("--warmup_steps", type=int, default=default_hyperparameters.get("warmup_steps"),
+                    help="Number of warmup steps")
+hyperparams_group.add_argument("--weight_decay", type=float, default=default_hyperparameters.get("weight_decay"),
+                    help="Weight decay for the optimizer")
+hyperparams_group.add_argument("--optimizer_type", type=str, default=default_hyperparameters.get("optimizer_type"),
+                    help="Optimizer type (e.g., 'sgd', 'adam')")
+hyperparams_group.add_argument("--momentum", type=float, default=default_hyperparameters.get("momentum"),
+                    help="Momentum factor (only used if optimizer_type is 'sgd')")
+hyperparams_group.add_argument("--beta1", type=float, default=default_hyperparameters.get("beta1"),
+                    help="Beta1 parameter for the Adam optimizer")
+hyperparams_group.add_argument("--beta2", type=float, default=default_hyperparameters.get("beta2"),
+                    help="Beta2 parameter for the Adam optimizer")
+
+wandb_group = parser.add_argument_group('WandB Configuration')
+wandb_group.add_argument("--api_key", type=str, default=config["wandb"]["api_key"],
+                    help="api key for wandb")
+wandb_group.add_argument("--project", type=str, default=config["wandb"]["project"],
+                    help="project name for wandb")
+wandb_group.add_argument("--run_name", type=str, default=config["wandb"]["run_name"],
+                    help="run name for wandb")
+
+
+model_group = parser.add_argument_group('Model Configuration')
+model_group.add_argument("--epochs", type=int, default=config["model"]["epochs"],
+                    help="number of epochs for the training run")
+model_group.add_argument("--save_path", type=str, default=config["model"]["save_path"],
+                    help="save path for the model")
+
+args = parser.parse_args()
+
+
 wandb_kwargs = {
-    "project": config["wandb"]["project"],
-    "name": config["wandb"].get("run_name", "optuna-hp-tuning")  # Default if not specified
+    "project": args.project,
+    "name": args.run_name 
 }
-wandb_enabled = config["wandb"]["api_key"] != ""
+wandb_enabled = args.api_key != ""
 if wandb_enabled:
-    wandb.login(key=config["wandb"]["api_key"])
+    wandb.login(key=args.api_key)
 
 wandbc = WeightsAndBiasesCallback(wandb_kwargs=wandb_kwargs, as_multirun=True)
 
-
-hyperparameters = config["hyperparameters"]
+# Consolidate hyperparameters from command-line or config
+hyperparameters = {
+    "learning_rate": args.learning_rate,
+    "warmup_steps": args.warmup_steps,
+    "weight_decay": args.weight_decay,
+    "optimizer_type": args.optimizer_type,
+    "momentum": args.momentum,
+    "beta1": args.beta1,
+    "beta2": args.beta2,
+}
 
 print(f"hyperparameters:\n{hyperparameters}")
 
@@ -322,28 +372,28 @@ model = GLUETransformer(
 if torch.cuda.is_available():
     if wandb_enabled:
         trainer = L.Trainer(
-            max_epochs=3,
+            max_epochs=args.epochs,
             logger=wandb_logger,
             accelerator="gpu",
             devices=1,
         )
     else:
         trainer = L.Trainer(
-            max_epochs=3,
+            max_epochs=args.epochs,
             accelerator="gpu",
             devices=1,
         )
 else:
     if wandb_enabled:
         trainer = L.Trainer(
-            max_epochs=3,
+            max_epochs=args.epochs,
             logger=wandb_logger,
             accelerator="cpu",
             devices=1,
         )
     else:
         trainer = L.Trainer(
-            max_epochs=3,
+            max_epochs=args.epochs,
             accelerator="cpu",
             devices=1,
         )
@@ -366,7 +416,7 @@ if wandb_enabled:
 
 
 
-model_save_path = "/app/models/model.pt"
+model_save_path = args.save_path
 os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
 torch.save(model.state_dict(), model_save_path)
 print(f"Model saved to {model_save_path}")

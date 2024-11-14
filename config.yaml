@@ -3,7 +3,9 @@ wandb:
   api_key: ""
   run_name: "MLOPS"
 
-
+model:
+  epochs: 3
+  save_path: "/app/models/model.pt"
 
 hyperparameters:
   learning_rate: 0.0031622776
