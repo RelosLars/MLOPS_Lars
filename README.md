@@ -20,6 +20,6 @@ This is a finetinuned distilbert-base-uncased model on paraphrase detection (MRP
 ### Windows:
 - Run the docker container with the following command, make sure to adjust the path ```docker run -v C:/Users/larss/Documents/mlops/config.yaml:/app/config.yaml -v C:/Users/larss/Documents/mlops:/app/models mlops_lars_soler```. Getting relative paths to work on Windows can be troublesome so this example uses absolte paths.
 
-### Linus:
+### Linux:
 - Run the docker container with the following command,```docker run -v ./config.yaml:/app/config.yaml -v ./models:/app/models mlops_lars_soler```.
 You should now see a run being executed. 
