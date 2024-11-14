@@ -22,6 +22,8 @@ from optuna.integration.wandb import WeightsAndBiasesCallback
 import yaml
 import os
 
+print(torch.cuda.is_available())
+
 class GLUEDataModule(L.LightningDataModule):
     task_text_field_map = {
         "cola": ["sentence"],
@@ -273,7 +275,9 @@ wandb_kwargs = {
     "project": config["wandb"]["project"],
     "name": config["wandb"].get("run_name", "optuna-hp-tuning")  # Default if not specified
 }
-wandb.login(key=config["wandb"]["api_key"])
+wandb_enabled = config["wandb"]["api_key"] != ""
+if wandb_enabled:
+    wandb.login(key=config["wandb"]["api_key"])
 
 wandbc = WeightsAndBiasesCallback(wandb_kwargs=wandb_kwargs, as_multirun=True)
 
@@ -286,11 +290,12 @@ seed = 42
 set_seed(seed)
 
 # Initialize Wandb logger
-wandb_logger = WandbLogger(
-    project=config["wandb"]["project"],
-    name=f"single-hp-tuning-seed-{seed}",
-    log_model="all"
-)
+if wandb_enabled:
+    wandb_logger = WandbLogger(
+        project=config["wandb"]["project"],
+        name=f"single-hp-tuning-seed-{seed}",
+        log_model="all"
+    )
 
 # Load data
 dm = GLUEDataModule(
@@ -314,25 +319,50 @@ model = GLUETransformer(
 )
 
 # Train the model
-trainer = L.Trainer(
-    max_epochs=3,
-    logger=wandb_logger,
-    accelerator="cpu",
-    devices=1,
-)
+if torch.cuda.is_available():
+    if wandb_enabled:
+        trainer = L.Trainer(
+            max_epochs=3,
+            logger=wandb_logger,
+            accelerator="gpu",
+            devices=1,
+        )
+    else:
+        trainer = L.Trainer(
+            max_epochs=3,
+            accelerator="gpu",
+            devices=1,
+        )
+else:
+    if wandb_enabled:
+        trainer = L.Trainer(
+            max_epochs=3,
+            logger=wandb_logger,
+            accelerator="cpu",
+            devices=1,
+        )
+    else:
+        trainer = L.Trainer(
+            max_epochs=3,
+            accelerator="cpu",
+            devices=1,
+        )
+
 trainer.fit(model, dm)
 
 # Validate the model and log validation loss to Wandb
 val_result = trainer.validate(model, datamodule=dm)
 val_loss = val_result[0]['val_loss']
-wandb.log({"val_loss": val_loss})
+if wandb_enabled:
+    wandb.log({"val_loss": val_loss})
 
 # Log hyperparameters and results
 print("Run completed with hyperparameters: ", hyperparameters)
 print("Validation loss: ", val_loss)
 
 # Finish Wandb run
-wandb.finish()
+if wandb_enabled:
+    wandb.finish()
 
 
 
