@@ -16,19 +16,32 @@ Welcome to my repository for Project 2: Containerization! In this project, I foc
 - Open a commandline window in the root folder of the cloned repository
 - Enter ```docker build -t mlops_lars_soler .``` to build the Docker image, feel free to replace ```mlops_lars_soler``` with any name
 ### Windows:
-- Run the docker container with the following command, make sure to adjust the path ```docker run -v C:/Users/larss/Documents/mlops/MLOPS_Lars/config.yaml:/app/config.yaml -v C:/Users/larss/Documents/mlops/MLOPS_Lars:/app/models mlops_lars_soler```. Getting relative paths to work on Windows can be troublesome so this example uses absolte paths.
+- Run the docker container with the following command, make sure to adjust the path
+```
+docker run -v C:/Users/larss/Documents/mlops/MLOPS_Lars/config.yaml:/app/config.yaml -v C:/Users/larss/Documents/mlops/MLOPS_Lars:/app/models mlops_lars_soler
+```
+Getting relative paths to work on Windows can be troublesome so this example uses absolte paths.
 
 ### Linux:
-- Run the docker container with the following command,```docker run -v ./config.yaml:/app/config.yaml -v ./models:/app/models mlops_lars_soler```.
+- Run the docker container with the following command,
+```
+docker run -v ./config.yaml:/app/config.yaml -v ./models:/app/models mlops_lars_soler
+```
 You should now see a run being executed. 
 
 ## Running with GPU support
 In order to use CUDA to access your local NVIDIA GPU you have to add the ```--gpus all``` flag. The training should then run significantly faster.
-Exampole: ```docker run --gpus all -v C:/Users/larss/Documents/mlops/MLOPS_Lars/config.yaml:/app/config.yaml -v C:/Users/larss/Documents/mlops/MLOPS_Lars:/app/models mlops_lars_soler```
+Exampole: 
+```
+docker run --gpus all -v C:/Users/larss/Documents/mlops/MLOPS_Lars/config.yaml:/app/config.yaml -v C:/Users/larss/Documents/mlops/MLOPS_Lars:/app/models mlops_lars_soler
+```
 
 ## Passing configuration as parameters
 You can configure the hyperparameters/model/wandb with parameters in the ```docker run``` command aswell. If you leave out an argument then its value in ```config.yaml``` gets used as default. 
-Example: ```docker run -v C:/Users/larss/Documents/mlops/MLOPS_Lars/config.yaml:/app/config.yaml -v C:/Users/larss/Documents/mlops/MLOPS_Lars:/app/models mlops_lars_soler --learning_rate 0.1 --epochs 1```
+Example: 
+```
+docker run -v C:/Users/larss/Documents/mlops/MLOPS_Lars/config.yaml:/app/config.yaml -v C:/Users/larss/Documents/mlops/MLOPS_Lars:/app/models mlops_lars_soler --learning_rate 0.1 --epochs 1
+```
 The arguments must be placed at the end of the command.
 
 ### All configurable arguments
